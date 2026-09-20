@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix Transaction Password Reset",
+  "description": "উত্তোলন পাসওয়ার্ড রিসেট করার নিরাপদ পোর্টাল। Reset game withdrawal and transaction password securely.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Review & Approval Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Hind Siliguri', 'Inter', sans-serif;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-800/90 border-b border-slate-700/80 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">উত্তোলন পাসওয়ার্ড রিসেট রিভিউ প্যানেল</h1>
+          <p class="text-xs text-slate-400">Google Sheet লাইভ ডাটাবেজ ও অ্যাডমিন অনুমোদন সিস্টেম</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="refreshBtn" onclick="loadRequests()" class="px-3.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition border border-slate-600 cursor-pointer">
+          <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>রিফ্রেশ করুন</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <!-- Total -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+        <p class="text-xs font-medium text-slate-400">মোট আবেদন</p>
+        <p id="statTotal" class="text-2xl font-extrabold text-white mt-1">0</p>
+      </div>
+
+      <!-- Pending -->
+      <div class="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-4">
+        <p class="text-xs font-medium text-amber-400">যাচাই চলছে (Pending)</p>
+        <p id="statPending" class="text-2xl font-extrabold text-amber-300 mt-1">0</p>
+      </div>
+
+      <!-- Approved -->
+      <div class="bg-emerald-950/40 border border-emerald-800/60 rounded-2xl p-4">
+        <p class="text-xs font-medium text-emerald-400">অনুমোদিত (Approved)</p>
+        <p id="statApproved" class="text-2xl font-extrabold text-emerald-300 mt-1">0</p>
+      </div>
+
+      <!-- Rejected -->
+      <div class="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-4">
+        <p class="text-xs font-medium text-rose-400">বাতিল (Rejected)</p>
+        <p id="statRejected" class="text-2xl font-extrabold text-rose-300 mt-1">0</p>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-slate-800/80 border border-slate-700/90 rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+      <!-- Search input -->
+      <div class="relative w-full md:w-96">
+        <input 
+          type="text" 
+          id="searchInput" 
+          oninput="filterRequests()" 
+          placeholder="সার্চ করুন (User, Phone, Request ID, Game)..." 
+          class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+        />
+        <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <button onclick="setFilter('ALL')" id="tabALL" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">সবগুলো</button>
+        <button onclick="setFilter('Pending')" id="tabPending" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition">Pending</button>
+        <button onclick="setFilter('Approved')" id="tabApproved" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition">Approved</button>
+        <button onclick="setFilter('Rejected')" id="tabRejected" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition">Rejected</button>
+      </div>
+    </div>
+
+    <!-- Requests Table / List -->
+    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-700 uppercase tracking-wider text-[11px]">
+            <tr>
+              <th class="py-3 px-4">তারিখ ও আইডি</th>
+              <th class="py-3 px-4">প্ল্যাটফর্ম</th>
+              <th class="py-3 px-4">ইউজার / ফোন</th>
+              <th class="py-3 px-4">জিমেইল</th>
+              <th class="py-3 px-4">পাসওয়ার্ড তথ্য</th>
+              <th class="py-3 px-4">স্ট্যাটাস</th>
+              <th class="py-3 px-4 text-center">অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="requestTableBody" class="divide-y divide-slate-700/60">
+            <!-- Loading placeholder -->
+            <tr>
+              <td colspan="7" class="py-12 text-center text-slate-400">
+                <div class="inline-flex items-center gap-2">
+                  <svg class="animate-spin h-5 w-5 text-blue-500" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span>Google Sheet থেকে ডাটা লোড হচ্ছে...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none bg-slate-800 text-white border border-slate-600 rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3">
+    <div id="toastIcon"></div>
+    <span id="toastMsg" class="text-xs sm:text-sm font-medium"></span>
+  </div>
+
+  <script>
+    var allRequests = [];
+    var currentFilter = 'ALL';
+
+    // On Load
+    window.addEventListener('DOMContentLoaded', function() {
+      loadRequests();
+    });
+
+    function loadRequests() {
+      var btn = document.getElementById('refreshBtn');
+      var icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('animate-spin');
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(data) {
+            if (icon) icon.classList.remove('animate-spin');
+            allRequests = data || [];
+            updateMetrics();
+            filterRequests();
+            showToast("Google Sheet ডাটা আপডেট হয়েছে", "success");
+          })
+          .withFailureHandler(function(err) {
+            if (icon) icon.classList.remove('animate-spin');
+            showToast("ডাটা লোড করতে ব্যর্থ: " + err, "error");
+          })
+          .getRequests();
+      } else {
+        // Mock fallback for browser testing
+        setTimeout(function() {
+          if (icon) icon.classList.remove('animate-spin');
+          allRequests = [
+            {
+              rowIndex: 2,
+              timestamp: "2026-09-06 14:32:10",
+              requestId: "REQ-784910",
+              gameName: "Jeetbuzz",
+              usernameOrPhone: "01712345678",
+              userGmail: "customer@gmail.com",
+              loginPassword: "UserLogin@123",
+              newWithdrawPassword: "889900",
+              status: "Pending",
+              reviewedAt: "",
+              notes: ""
+            }
+          ];
+          updateMetrics();
+          filterRequests();
+        }, 800);
+      }
+    }
+
+    function updateMetrics() {
+      var total = allRequests.length;
+      var pending = 0;
+      var approved = 0;
+      var rejected = 0;
+
+      for (var i = 0; i < allRequests.length; i++) {
+        var s = (allRequests[i].status || '').toLowerCase();
+        if (s.indexOf('app') !== -1) approved++;
+        else if (s.indexOf('rej') !== -1) rejected++;
+        else pending++;
+      }
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statPending').innerText = pending;
+      document.getElementById('statApproved').innerText = approved;
+      document.getElementById('statRejected').innerText = rejected;
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      var tabs = document.querySelectorAll('.filter-tab');
+      tabs.forEach(function(t) {
+        t.className = "filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition";
+      });
+      var activeTab = document.getElementById('tab' + filter);
+      if (activeTab) {
+        activeTab.className = "filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition";
+      }
+      filterRequests();
+    }
+
+    function filterRequests() {
+      var query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      var filtered = allRequests.filter(function(r) {
+        // Status filter
+        var s = (r.status || 'Pending').toLowerCase();
+        if (currentFilter === 'Pending' && s.indexOf('pen') === -1 && s.indexOf('review') === -1) return false;
+        if (currentFilter === 'Approved' && s.indexOf('app') === -1) return false;
+        if (currentFilter === 'Rejected' && s.indexOf('rej') === -1) return false;
+
+        // Search query
+        if (!query) return true;
+        var text = (r.requestId + " " + r.gameName + " " + r.usernameOrPhone + " " + r.userGmail).toLowerCase();
+        return text.indexOf(query) !== -1;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(requests) {
+      var tbody = document.getElementById('requestTableBody');
+      if (!requests || requests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-xs">কোনো আবেদন পাওয়া যায়নি</td></tr>';
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < requests.length; i++) {
+        var r = requests[i];
+        var isApproved = (r.status || '').toLowerCase().indexOf('app') !== -1;
+        var isRejected = (r.status || '').toLowerCase().indexOf('rej') !== -1;
+
+        var statusBadge = '';
+        if (isApproved) {
+          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">✓ Approved</span>';
+        } else if (isRejected) {
+          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">✕ Rejected</span>';
+        } else {
+          statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">⏳ Pending</span>';
+        }
+
+        html += '<tr class="hover:bg-slate-750 transition-colors">'
+          // Column 1: Time & ID
+          + '<td class="py-3 px-4">'
+          + '  <div class="font-bold text-white mono flex items-center gap-1.5">'
+          + '    <span>' + escapeHtml(r.requestId) + '</span>'
+          + '    <button onclick="copyText(\'' + escapeHtml(r.requestId) + '\')" title="Copy ID" class="text-slate-400 hover:text-white transition cursor-pointer">'
+          + '      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+          + '    </button>'
+          + '  </div>'
+          + '  <div class="text-[11px] text-slate-400 mt-0.5">' + escapeHtml(r.timestamp) + '</div>'
+          + '</td>'
+
+          // Column 2: Game
+          + '<td class="py-3 px-4">'
+          + '  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">' + escapeHtml(r.gameName) + '</span>'
+          + '</td>'
+
+          // Column 3: User / Phone
+          + '<td class="py-3 px-4">'
+          + '  <div class="font-medium text-slate-200 flex items-center gap-1.5">'
+          + '    <span>' + escapeHtml(r.usernameOrPhone) + '</span>'
+          + '    <button onclick="copyText(\'' + escapeHtml(r.usernameOrPhone) + '\')" title="Copy Username/Phone" class="text-slate-400 hover:text-white transition cursor-pointer">'
+          + '      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+          + '    </button>'
+          + '  </div>'
+          + '</td>'
+
+          // Column 4: Gmail
+          + '<td class="py-3 px-4">'
+          + (r.userGmail ? '<a href="mailto:' + escapeHtml(r.userGmail) + '" class="text-slate-300 hover:text-blue-400 transition text-xs">' + escapeHtml(r.userGmail) + '</a>' : '<span class="text-slate-600 text-xs">দেওয়া হয়নি</span>')
+          + '</td>'
+
+          // Column 5: Passwords
+          + '<td class="py-3 px-4">'
+          + '  <div class="space-y-1">'
+          + '    <div class="text-[11px] flex items-center gap-1 text-slate-400">'
+          + '      <span>Login:</span>'
+          + '      <span id="lp_' + i + '" class="text-slate-200 font-mono">••••••••</span>'
+          + '      <button onclick="toggleSecret(\'lp_' + i + '\', \'' + escapeAttr(r.loginPassword) + '\')" class="text-slate-500 hover:text-slate-300 cursor-pointer text-[10px] underline ml-1">দেখুন</button>'
+          + '    </div>'
+          + '    <div class="text-[11px] flex items-center gap-1 text-slate-400">'
+          + '      <span class="text-emerald-400 font-semibold">New Pin:</span>'
+          + '      <span id="nwp_' + i + '" class="text-emerald-300 font-bold font-mono">••••••••</span>'
+          + '      <button onclick="toggleSecret(\'nwp_' + i + '\', \'' + escapeAttr(r.newWithdrawPassword) + '\')" class="text-slate-500 hover:text-slate-300 cursor-pointer text-[10px] underline ml-1">দেখুন</button>'
+          + '      <button onclick="copyText(\'' + escapeAttr(r.newWithdrawPassword) + '\')" title="Copy New Pin" class="text-slate-400 hover:text-emerald-300 cursor-pointer">'
+          + '        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+          + '      </button>'
+          + '    </div>'
+          + '  </div>'
+          + '</td>'
+
+          // Column 6: Status
+          + '<td class="py-3 px-4">'
+          + '  <div>' + statusBadge + '</div>'
+          + (r.reviewedAt ? '<div class="text-[10px] text-slate-500 mt-1">' + escapeHtml(r.reviewedAt) + '</div>' : '')
+          + '</td>'
+
+          // Column 7: Actions
+          + '<td class="py-3 px-4 text-center">'
+          + '  <div class="flex items-center justify-center gap-1.5">'
+          + '    <button onclick="handleAction(\'' + escapeAttr(r.requestId) + '\', \'Approved\')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1 shadow-sm">'
+          + '      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+          + '      <span>Approve</span>'
+          + '    </button>'
+          + '    <button onclick="handleAction(\'' + escapeAttr(r.requestId) + '\', \'Rejected\')" class="px-2.5 py-1 rounded bg-rose-600/80 hover:bg-rose-500 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1 shadow-sm">'
+          + '      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
+          + '      <span>Reject</span>'
+          + '    </button>'
+          + '  </div>'
+          + '</td>'
+
+          + '</tr>';
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function toggleSecret(elementId, realValue) {
+      var el = document.getElementById(elementId);
+      if (!el) return;
+      if (el.innerText === '••••••••') {
+        el.innerText = realValue;
+      } else {
+        el.innerText = '••••••••';
+      }
+    }
+
+    function handleAction(requestId, actionStatus) {
+      var confirmMsg = actionStatus === 'Approved'
+        ? "আপনি কি নিশ্চিত যে আবেদনটি অনুমোদন (Approve) করতে চান? ব্যবহারকারীকে স্বয়ংক্রিয় কনফার্মেশন মেইল পাঠানো হবে।"
+        : "আপনি কি নিশ্চিত যে আবেদনটি বাতিল (Reject) করতে চান?";
+
+      if (!confirm(confirmMsg)) {
+        return;
+      }
+
+      var note = "";
+      if (actionStatus === 'Rejected') {
+        note = prompt("বাতিল করার কারণ লিখুন (ঐচ্ছিক):", "ভুল অ্যাকাউন্টের তথ্য দেওয়া হয়েছে।") || "";
+      }
+
+      showToast(requestId + " আপডেট হচ্ছে...", "info");
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success) {
+              showToast(requestId + " সফলভাবে " + actionStatus + " করা হয়েছে!", "success");
+              // Update local state
+              for (var i = 0; i < allRequests.length; i++) {
+                if (allRequests[i].requestId === requestId) {
+                  allRequests[i].status = actionStatus;
+                  allRequests[i].reviewedAt = res.reviewedAt || new Date().toLocaleString();
+                  break;
+                }
+              }
+              updateMetrics();
+              filterRequests();
+            } else {
+              showToast("আপডেট ব্যর্থ: " + (res.error || "অজ্ঞাত সমস্যা"), "error");
+            }
+          })
+          .withFailureHandler(function(err) {
+            showToast("সার্ভার এরর: " + err, "error");
+          })
+          .updateRequestStatus(requestId, actionStatus, note);
+      } else {
+        // Mock fallback
+        setTimeout(function() {
+          showToast(requestId + " সফলভাবে " + actionStatus + " করা হয়েছে! (Demo)", "success");
+          for (var i = 0; i < allRequests.length; i++) {
+            if (allRequests[i].requestId === requestId) {
+              allRequests[i].status = actionStatus;
+              allRequests[i].reviewedAt = new Date().toLocaleString();
+              break;
+            }
+          }
+          updateMetrics();
+          filterRequests();
+        }, 500);
+      }
+    }
+
+    function copyText(text) {
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(function() {
+        showToast("কপি করা হয়েছে: " + text, "success");
+      }).catch(function() {
+        showToast("কপি করা যায়নি", "error");
+      });
+    }
+
+    function showToast(message, type) {
+      var toast = document.getElementById('toast');
+      var toastMsg = document.getElementById('toastMsg');
+      var toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.innerText = message;
+      if (type === 'success') {
+        toast.className = "fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 bg-emerald-900 border border-emerald-600 text-white rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3";
+        toastIcon.innerHTML = '✓';
+      } else if (type === 'error') {
+        toast.className = "fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 bg-rose-900 border border-rose-600 text-white rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3";
+        toastIcon.innerHTML = '✕';
+      } else {
+        toast.className = "fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3";
+        toastIcon.innerHTML = 'ℹ';
+      }
+
+      setTimeout(function() {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function escapeAttr(str) {
+      if (!str) return '';
+      return String(str).replace(/"/g, "&quot;").replace(/'/g, "\\'");
+    }
+  </script>
+</body>
+</html>
